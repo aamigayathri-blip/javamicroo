@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Event Management System</title>
+    <!-- Tailwind CSS for modern, clean UI styling -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Top Navigation -->
+    <header id="app-header" class="hidden bg-indigo-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-calendar-days text-2xl text-indigo-300"></i>
+                <h1 class="text-xl font-bold tracking-wide">CampusEvent MS</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="session-label" class="text-sm text-indigo-100"></span>
+                <button onclick="logout()" class="px-3 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-sm font-semibold"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login Portal: choose a module, then sign in -->
+    <section id="login-portal" class="flex-grow flex items-center justify-center px-4 py-10 bg-gradient-to-br from-slate-50 to-indigo-100">
+        <div class="w-full max-w-4xl">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-900 text-white shadow-lg mb-4"><i class="fa-solid fa-calendar-check text-3xl"></i></div>
+                <h1 class="text-3xl font-extrabold text-slate-900">Campus Event Management</h1>
+                <p class="mt-2 text-slate-600">Sign in to manage campus events or discover and register for them.</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-5">
+                <button type="button" onclick="showLoginModule('student')" class="text-left bg-white p-6 rounded-2xl border-2 border-transparent hover:border-indigo-400 shadow-sm transition">
+                    <span class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-user-graduate"></i></span>
+                    <h2 class="text-xl font-bold text-slate-900">Student Dashboard</h2>
+                    <p class="text-sm text-slate-500 mt-2">View published events, open the calendar, choose available slots, and manage your registrations.</p>
+                    <span class="inline-block mt-4 text-indigo-700 font-semibold text-sm">Student Login <i class="fa-solid fa-arrow-right ml-1"></i></span>
+                </button>
+                <button type="button" onclick="showLoginModule('admin')" class="text-left bg-white p-6 rounded-2xl border-2 border-transparent hover:border-indigo-400 shadow-sm transition">
+                    <span class="w-12 h-12 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-user-shield"></i></span>
+                    <h2 class="text-xl font-bold text-slate-900">Admin Dashboard</h2>
+                    <p class="text-sm text-slate-500 mt-2">Create events, manage schedules and venues, review registrations, and create individual student login IDs.</p>
+                    <span class="inline-block mt-4 text-indigo-700 font-semibold text-sm">Admin Login <i class="fa-solid fa-arrow-right ml-1"></i></span>
+                </button>
+            </div>
+            <div id="login-form-panel" class="hidden mt-6 bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-5">
+                    <div><p id="login-module-kicker" class="text-xs font-bold uppercase tracking-widest text-indigo-600">Student Module</p><h3 id="login-module-title" class="text-xl font-bold text-slate-900">Student Login</h3></div>
+                    <button type="button" onclick="hideLoginForm()" class="text-slate-400 hover:text-slate-700" aria-label="Close login form"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form id="login-form" onsubmit="handleLogin(event)" class="max-w-lg space-y-4">
+                    <input type="hidden" id="login-role" value="student">
+                    <div><label for="login-username" class="block text-sm font-semibold text-slate-700 mb-1">Username / Student Login ID</label><input id="login-username" required autocomplete="username" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Enter your login ID"></div>
+                    <div><label for="login-password" class="block text-sm font-semibold text-slate-700 mb-1">Password</label><input id="login-password" type="password" required autocomplete="current-password" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Enter password"></div>
+                    <p id="login-error" class="hidden text-sm text-rose-600"></p>
+                    <button type="submit" class="w-full py-3 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl font-semibold">Sign In</button>
+                    <p id="login-hint" class="text-xs text-slate-500"></p>
+                </form>
+            </div>
+            <p class="text-center text-xs text-slate-500 mt-6">Academic demo interface. Authentication in this HTML-only prototype is for demonstration, not production security.</p>
+        </div>
+    </section>
+
+    <!-- Main Container -->
+    <main id="app-main" class="hidden flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- Notification Banner / Alerts -->
+        <div id="alert-box" class="hidden mb-6 p-4 rounded-lg border text-sm transition-all shadow-sm"></div>
+
+        <!-- ================= STUDENT VIEW ================= -->
+        <div id="view-student" class="space-y-6">
+            <!-- Student dashboard navigation -->
+            <div class="flex flex-wrap items-center gap-3 border-b border-slate-200 pb-3">
+                <button onclick="switchStudentTab('catalog')" id="tab-catalog" class="px-3 py-2 rounded-lg bg-indigo-600 text-white font-semibold text-sm transition">Event Catalog</button>
+                <button onclick="toggleStudentCalendar()" id="btn-student-calendar" class="px-3 py-2 rounded-lg border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 font-semibold text-sm transition"><i class="fa-regular fa-calendar-days mr-1"></i> Open Calendar</button>
+                <button onclick="switchStudentTab('my-registrations')" id="tab-registrations" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 font-semibold text-sm transition">My Registrations (<span id="reg-count">0</span>)</button>
+            </div>
+
+            <!-- TAB 1: Event Catalog Screen -->
+            
+            <div id="student-tab-catalog" class="space-y-6">
+                <!-- Added interactive calendar and time-slot overview -->
+                <section id="student-calendar-panel" class="hidden bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-indigo-500">Plan your schedule</p>
+                            <h2 class="text-xl font-bold text-slate-900">Campus Calendar</h2>
+                            <p class="text-sm text-slate-500">Choose a date to view events and time slots.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="changeCalendarMonth(-1)" class="px-3 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"><i class="fa-solid fa-chevron-left"></i></button>
+                            <span id="calendar-month-label" class="font-semibold text-slate-700 min-w-32 text-center"></span>
+                            <button type="button" onclick="changeCalendarMonth(1)" class="px-3 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-7 text-center text-xs font-bold text-slate-500 mb-1">
+                        <div class="py-2">SUN</div><div class="py-2">MON</div><div class="py-2">TUE</div><div class="py-2">WED</div><div class="py-2">THU</div><div class="py-2">FRI</div><div class="py-2">SAT</div>
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1"></div>
+                    <div class="flex flex-wrap gap-3 text-xs text-slate-500 mt-4">
+                        <span><i class="fa-solid fa-circle text-indigo-500 mr-1"></i> Day has events</span>
+                        <span><i class="fa-solid fa-circle text-emerald-500 mr-1"></i> Selected date</span>
+                    </div>
+                    <div class="mt-5 border-t border-slate-100 pt-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                            <h3 id="selected-date-heading" class="font-bold text-slate-800">Events and slots · All dates</h3>
+                            <button type="button" onclick="clearCalendarDateFilter()" class="text-xs font-semibold text-indigo-600 hover:underline">Show all events</button>
+                        </div>
+                        <div id="calendar-day-details" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                        <div id="calendar-time-slots" class="mt-3 flex flex-wrap gap-2"></div>
+                    </div>
+                </section>
+
+                <!-- Search & Filters Screen Component -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="relative w-full md:w-96">
+                        <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="search-input" oninput="filterEvents()" placeholder="Search by event name or venue..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="flex w-full md:w-auto gap-3">
+                        <select id="category-filter" onchange="filterEvents()" class="w-full md:w-48 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">All Categories</option>
+                            <option value="Technical">Technical</option>
+                            <option value="Cultural">Cultural</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Workshop">Workshop</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Event Grid List -->
+                <div id="student-event-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Injected dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- TAB 2: Student Registrations -->
+            <div id="student-tab-registrations" class="hidden space-y-4">
+                <h3 class="text-lg font-bold text-slate-800">My Registered Events</h3>
+                <div id="my-reg-list" class="space-y-3">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ADMIN VIEW ================= -->
+        <div id="view-admin" class="hidden space-y-6">
+            <!-- Admin Dashboard Header Controls -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Admin Control Panel</h2>
+                    <p class="text-sm text-slate-500">Manage campus events, schedules, capacities, and participant logs.</p>
+                </div>
+                <button onclick="openEventModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Create New Event</span>
+                </button>
+            </div>
+
+            <!-- Admin Overview Metrics Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Total Events</span>
+                    <h4 id="admin-stat-events" class="text-2xl font-bold text-slate-800 mt-1">0</h4>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Total System Registrations</span>
+                    <h4 id="admin-stat-regs" class="text-2xl font-bold text-slate-800 mt-1">0</h4>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Active Venues Booked</span>
+                    <h4 id="admin-stat-venues" class="text-2xl font-bold text-slate-800 mt-1">0</h4>
+                </div>
+            </div>
+
+            <!-- Admin Student Login Management -->
+            <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-800">Student Login Management</h3>
+                    <p class="text-xs text-slate-500 mt-1">Create a unique login ID and password for each student.</p>
+                </div>
+                <form id="student-account-form" onsubmit="createStudentAccount(event)" class="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div><label for="new-student-name" class="block text-xs font-semibold text-slate-600 mb-1">Student Full Name</label><input id="new-student-name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Full name"></div>
+                    <div><label for="new-student-class" class="block text-xs font-semibold text-slate-600 mb-1">Class</label><input id="new-student-class" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="e.g. B.Tech CSE"></div>
+                    <div><label for="new-student-year" class="block text-xs font-semibold text-slate-600 mb-1">Year of Passing</label><input id="new-student-year" type="number" min="2000" max="2100" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="e.g. 2028"></div>
+                    <div><label for="new-student-roll" class="block text-xs font-semibold text-slate-600 mb-1">University Roll No.</label><input id="new-student-roll" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="e.g. 2400123"></div>
+                    <div><label for="new-student-id" class="block text-xs font-semibold text-slate-600 mb-1">Unique Login ID</label><input id="new-student-id" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="e.g. STU2026001"></div>
+                    <div><label for="new-student-password" class="block text-xs font-semibold text-slate-600 mb-1">Temporary Password</label><input id="new-student-password" type="password" required minlength="4" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Set password"></div>
+                    <div class="flex items-end"><button type="submit" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold"><i class="fa-solid fa-user-plus mr-1"></i> Create Student Login</button></div>
+                </form>
+                <div class="overflow-x-auto border-t border-slate-100">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="py-3 px-5">Student Name</th><th class="py-3 px-5">Login ID</th><th class="py-3 px-5">Account</th></tr></thead>
+                        <tbody id="student-account-table" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Admin Event Management Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-800">Event Management Table</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs tracking-wider">
+                                <th class="py-3 px-6">Event Name</th>
+                                <th class="py-3 px-6">Category</th>
+                                <th class="py-3 px-6">Date & Time</th>
+                                <th class="py-3 px-6">Venue</th>
+                                <th class="py-3 px-6">Capacity</th>
+                                <th class="py-3 px-6 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-event-table-body" class="divide-y divide-slate-100">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Modal: Event Creation / Edit Form -->
+    <div id="event-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all">
+            <div class="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 id="modal-title" class="font-bold text-base">Create New Event</h3>
+                <button onclick="closeEventModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="event-form" onsubmit="handleSaveEvent(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" id="edit-event-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Event Name</label>
+                    <input type="text" id="f-name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Description</label>
+                    <textarea id="f-desc" rows="2" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Category</label>
+                        <select id="f-category" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="Technical">Technical</option>
+                            <option value="Cultural">Cultural</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Workshop">Workshop</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Capacity Limit</label>
+                        <input type="number" id="f-capacity" min="1" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Date</label>
+                        <input type="date" id="f-date" required onchange="refreshTimeSlots()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Time Slot</label>
+                        <select id="f-time" required onchange="validateSelectedTimeSlot()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="">Choose a time slot</option>
+                        </select>
+                        <p class="text-xs text-slate-500 mt-1">Slots already booked at the same venue and date are disabled.</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Venue</label>
+                    <input type="text" id="f-venue" required oninput="refreshTimeSlots()" placeholder="e.g. Main Auditorium, Lab 3" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div class="pt-4 flex justify-end space-x-3 border-t border-slate-100">
+                    <button type="button" onclick="closeEventModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow">Save Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: View Registrations / Attendance List (Admin view specific record) -->
+    <div id="participants-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-base">Participant Records</h3>
+                <button onclick="closeParticipantsModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <h4 id="participants-event-title" class="font-semibold text-indigo-600 text-sm"></h4>
+                <div id="participants-list" class="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer id="app-footer" class="hidden bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-auto">
+        Campus Event Management System &bull; Interactive BRD Implementation Template
+    </footer>
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script>
+        // Mock State Initializer
+        let events = [
+            { id: 1, name: "AI & Machine Learning Hackathon", desc: "Build cutting-edge neural models over 24 hours.", category: "Technical", date: "2026-10-15", time: "10:00", venue: "Computer Lab Alpha", capacity: 3, registeredStudents: ["Alex Smith", "Emma Watson"] },
+            { id: 2, name: "Inter-College Annual Dance Fest", desc: "Showcase your artistic moves on the grand stage.", category: "Cultural", date: "2026-10-18", time: "17:30", venue: "Main Auditorium", capacity: 5, registeredStudents: ["Alex Smith"] },
+            { id: 3, name: "Intramural Basketball Championship", desc: "Fast-paced knockout tournament for department teams.", category: "Sports", date: "2026-10-15", time: "14:00", venue: "Indoor Sports Complex", capacity: 2, registeredStudents: ["John Doe"] },
+            { id: 4, name: "Cybersecurity & Ethical Hacking", desc: "Hands-on vulnerability assessment workshop.", category: "Workshop", date: "2026-10-22", time: "11:00", venue: "Seminar Hall B", capacity: 4, registeredStudents: [] }
+        ];
+
+        // Demo accounts. Admin can add more student accounts from the Admin Dashboard.
+        // These accounts and app data are stored locally for this browser demo only.
+        let studentAccounts = JSON.parse(localStorage.getItem("campusStudentAccounts") || "null") || [
+            { name: "Alex Smith", username: "alex", password: "student123" },
+            { name: "Emma Watson", username: "emma", password: "student123" },
+            { name: "John Doe", username: "john", password: "student123" }
+        ];
+        const ADMIN_ACCOUNT = { username: "admin", password: "admin123" };
+        let currentUser = "";
+        let currentRole = "";
+        let calendarMonth = new Date();
+        let selectedCalendarDate = "";
+        const TIME_SLOTS = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
+
+
+        // Initialization: start at the login portal, not inside a dashboard.
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("login-hint").textContent =
+                "Demo accounts: student alex / student123, or admin / admin123. Admin-created IDs can be used after creation.";
+            renderCalendar();
+            refreshTimeSlots();
+        });
+
+        function showLoginModule(role) {
+            document.getElementById("login-form-panel").classList.remove("hidden");
+            document.getElementById("login-role").value = role;
+            document.getElementById("login-module-kicker").textContent = role === "admin" ? "Administrator Module" : "Student Module";
+            document.getElementById("login-module-title").textContent = role === "admin" ? "Admin Login" : "Student Login";
+            document.getElementById("login-username").placeholder = role === "admin" ? "Admin username" : "Student login ID";
+            document.getElementById("login-hint").textContent = role === "admin"
+                ? "Demo admin credentials: admin / admin123"
+                : "Demo student: alex / student123. Ask the administrator for your individual login ID.";
+            document.getElementById("login-error").classList.add("hidden");
+            document.getElementById("login-form").reset();
+            document.getElementById("login-role").value = role;
+            document.getElementById("login-form-panel").scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        function hideLoginForm() {
+            document.getElementById("login-form-panel").classList.add("hidden");
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const role = document.getElementById("login-role").value;
+            const username = document.getElementById("login-username").value.trim();
+            const password = document.getElementById("login-password").value;
+            let account = null;
+
+            if (role === "admin") {
+                if (username === ADMIN_ACCOUNT.username && password === ADMIN_ACCOUNT.password) {
+                    account = { name: "Administrator", username: ADMIN_ACCOUNT.username };
+                }
+            } else {
+                account = studentAccounts.find(a => a.username.toLowerCase() === username.toLowerCase() && a.password === password) || null;
+            }
+
+            if (!account) {
+                const error = document.getElementById("login-error");
+                error.textContent = "Login failed. Check your login ID and password, then try again.";
+                error.classList.remove("hidden");
+                return;
+            }
+
+            currentRole = role;
+            currentUser = role === "student" ? account.name : "Administrator";
+            document.getElementById("login-portal").classList.add("hidden");
+            document.getElementById("app-header").classList.remove("hidden");
+            document.getElementById("app-main").classList.remove("hidden");
+            document.getElementById("app-footer").classList.remove("hidden");
+            document.getElementById("session-label").textContent = role === "admin"
+                ? "Admin Dashboard"
+                : `${account.name} · ${account.username}`;
+            document.getElementById("view-student").classList.toggle("hidden", role !== "student");
+            document.getElementById("view-admin").classList.toggle("hidden", role !== "admin");
+            document.getElementById("alert-box").classList.add("hidden");
+            if (role === "student") {
+                document.getElementById("student-calendar-panel").classList.add("hidden");
+                document.getElementById("student-tab-catalog").classList.remove("hidden");
+                switchStudentTab("catalog");
+            }
+            renderApp();
+            renderCalendar();
+            renderStudentAccounts();
+        }
+
+        function logout() {
+            currentUser = "";
+            currentRole = "";
+            document.getElementById("login-portal").classList.remove("hidden");
+            document.getElementById("app-header").classList.add("hidden");
+            document.getElementById("app-main").classList.add("hidden");
+            document.getElementById("app-footer").classList.add("hidden");
+            document.getElementById("login-form-panel").classList.add("hidden");
+            document.getElementById("login-form").reset();
+        }
+
+        function toggleStudentCalendar() {
+            const panel = document.getElementById("student-calendar-panel");
+            const button = document.getElementById("btn-student-calendar");
+            const willOpen = panel.classList.contains("hidden");
+            panel.classList.toggle("hidden", !willOpen);
+            button.innerHTML = willOpen
+                ? '<i class="fa-regular fa-calendar-days mr-1"></i> Hide Calendar'
+                : '<i class="fa-regular fa-calendar-days mr-1"></i> Open Calendar';
+            if (willOpen) {
+                renderCalendar();
+                panel.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }
+
+        // Student Navigation Switcher
+        function switchStudentTab(tab) {
+            const catalogTab = document.getElementById("student-tab-catalog");
+            const regTab = document.getElementById("student-tab-registrations");
+            const btnCat = document.getElementById("tab-catalog");
+            const btnReg = document.getElementById("tab-registrations");
+
+            if (tab === 'catalog') {
+                catalogTab.classList.remove("hidden");
+                regTab.classList.add("hidden");
+                btnCat.className = "pb-3 border-b-2 border-indigo-600 text-indigo-600 font-semibold text-sm transition";
+                btnReg.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 font-semibold text-sm transition";
+            } else {
+                catalogTab.classList.add("hidden");
+                regTab.classList.remove("hidden");
+                document.getElementById("student-calendar-panel").classList.add("hidden");
+                document.getElementById("btn-student-calendar").innerHTML = '<i class="fa-regular fa-calendar-days mr-1"></i> Open Calendar';
+                btnReg.className = "pb-3 border-b-2 border-indigo-600 text-indigo-600 font-semibold text-sm transition";
+                btnCat.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 font-semibold text-sm transition";
+                renderMyRegistrations();
+            }
+        }
+
+        // Master Render Controller
+        function renderApp() {
+            if (currentRole === 'student') {
+                filterEvents();
+                updateRegistrationCountBadge();
+            } else {
+                renderAdminDashboard();
+            }
+        }
+
+        // ----------------- STUDENT CATALOG & REGISTRATION LOGIC -----------------
+
+        function filterEvents() {
+            const query = document.getElementById("search-input").value.toLowerCase();
+            const category = document.getElementById("category-filter").value;
+
+            const filtered = events.filter(ev => {
+                const matchesQuery = ev.name.toLowerCase().includes(query) || ev.venue.toLowerCase().includes(query);
+                const matchesCat = category === "" || ev.category === category;
+                const matchesDate = !selectedCalendarDate || ev.date === selectedCalendarDate;
+                return matchesQuery && matchesCat && matchesDate;
+            });
+
+            const grid = document.getElementById("student-event-grid");
+            grid.innerHTML = "";
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-400 text-sm">No campus events found matching criteria.</div>`;
+                return;
+            }
+
+            filtered.forEach(ev => {
+                const isRegistered = ev.registeredStudents.includes(currentUser);
+                const isFull = ev.registeredStudents.length >= ev.capacity;
+
+                let actionButtonHtml = "";
+                if (isRegistered) {
+                    actionButtonHtml = `<button onclick="unregisterEvent(${ev.id})" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium py-2 rounded-lg text-sm transition border border-rose-200">Cancel Registration</button>`;
+                } else if (isFull) {
+                    actionButtonHtml = `<button disabled class="w-full bg-slate-100 text-slate-400 font-medium py-2 rounded-lg text-sm cursor-not-allowed">Event Fully Booked</button>`;
+                } else {
+                    actionButtonHtml = `<button onclick="registerEvent(${ev.id})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm transition shadow-sm">Register Now</button>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:border-indigo-300 transition">
+                        <div class="p-5 space-y-3">
+                            <div class="flex justify-between items-start">
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600">${ev.category}</span>
+                                <span class="text-xs font-medium text-slate-400"><i class="fa-regular fa-calendar mr-1"></i>${ev.date}</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-base leading-snug">${ev.name}</h4>
+                                <p class="text-xs text-slate-500 mt-1 line-clamp-2">${ev.desc}</p>
+                            </div>
+                            <div class="text-xs text-slate-600 space-y-1 pt-2 border-t border-slate-100">
+                                <div><i class="fa-solid fa-location-dot w-4 text-slate-400"></i> ${ev.venue}</div>
+                                <div><i class="fa-regular fa-clock w-4 text-slate-400"></i> ${ev.time}</div>
+                                <div><i class="fa-solid fa-users w-4 text-slate-400"></i> Capacity: <span class="font-semibold">${ev.registeredStudents.length}/${ev.capacity}</span></div>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-slate-50 border-t border-slate-100">
+                            ${actionButtonHtml}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Edge Case Handling: Duplicate, Capacity, and Schedule Overlap
+        function registerEvent(eventId) {
+            const eventToRegister = events.find(e => e.id === eventId);
+
+            // 1. Duplicate Registration Check
+            if (eventToRegister.registeredStudents.includes(currentUser)) {
+                showAlert("You are already registered for this event.", "error");
+                return;
+            }
+
+            // 2. Capacity Limit Check
+            if (eventToRegister.registeredStudents.length >= eventToRegister.capacity) {
+                showAlert("Registration failed: Event has reached its maximum seating capacity.", "error");
+                return;
+            }
+
+            // 3. Schedule Conflict Check (Overlapping dates & times for current user)
+            const conflictingEvent = events.find(e => 
+                e.registeredStudents.includes(currentUser) && 
+                e.date === eventToRegister.date && 
+                e.time === eventToRegister.time
+            );
+
+            if (conflictingEvent) {
+                showAlert(`Schedule Conflict! You are already registered for '${conflictingEvent.name}' at the exact same date and time (${eventToRegister.date} @ ${eventToRegister.time}).`, "error");
+                return;
+            }
+
+            // Execute Registration
+            eventToRegister.registeredStudents.push(currentUser);
+            showAlert(`Successfully registered for "${eventToRegister.name}"!`, "success");
+            renderApp();
+            renderCalendar();
+        }
+
+        function unregisterEvent(eventId) {
+            const ev = events.find(e => e.id === eventId);
+            ev.registeredStudents = ev.registeredStudents.filter(s => s !== currentUser);
+            showAlert(`Cancelled registration for "${ev.name}".`, "info");
+            renderApp();
+            renderCalendar();
+        }
+
+        function renderMyRegistrations() {
+            const container = document.getElementById("my-reg-list");
+            container.innerHTML = "";
+
+            const myEvents = events.filter(e => e.registeredStudents.includes(currentUser));
+
+            if (myEvents.length === 0) {
+                container.innerHTML = `<div class="p-8 bg-white rounded-xl border border-slate-200 text-center text-slate-400 text-sm">You haven't registered for any events yet.</div>`;
+                return;
+            }
+
+            myEvents.forEach(ev => {
+                container.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div class="space-y-1">
+                            <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${ev.category}</span>
+                            <h4 class="font-bold text-slate-800">${ev.name}</h4>
+                            <p class="text-xs text-slate-500"><i class="fa-regular fa-calendar mr-1"></i>${ev.date} at ${ev.time} &bull; <i class="fa-solid fa-location-dot ml-1 mr-1"></i>${ev.venue}</p>
+                        </div>
+                        <button onclick="unregisterEvent(${ev.id})" class="px-3 py-1.5 border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg text-xs font-medium transition">Cancel Registration</button>
+                    </div>
+                `;
+            });
+        }
+
+        function updateRegistrationCountBadge() {
+            const count = events.filter(e => e.registeredStudents.includes(currentUser)).length;
+            document.getElementById("reg-count").innerText = count;
+        }
+
+        // ----------------- ADMIN CONTROLS & LOGIC -----------------
+
+        function renderAdminDashboard() {
+            const tbody = document.getElementById("admin-event-table-body");
+            tbody.innerHTML = "";
+
+            let totalRegs = 0;
+            const venues = new Set();
+
+            events.forEach(ev => {
+                totalRegs += ev.registeredStudents.length;
+                venues.add(ev.venue);
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50/50 transition">
+                        <td class="py-3 px-6 font-medium text-slate-900">${ev.name}<br><span class="text-xs text-slate-400 font-normal line-clamp-1">${ev.desc}</span></td>
+                        <td class="py-3 px-6"><span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">${ev.category}</span></td>
+                        <td class="py-3 px-6 text-slate-600">${ev.date}<br><span class="text-xs text-slate-400">${ev.time}</span></td>
+                        <td class="py-3 px-6 text-slate-600">${ev.venue}</td>
+                        <td class="py-3 px-6 font-medium text-slate-700">
+                            <button onclick="openParticipantsModal(${ev.id})" class="text-indigo-600 hover:underline flex items-center space-x-1">
+                                <i class="fa-solid fa-users text-xs"></i>
+                                <span>${ev.registeredStudents.length} / ${ev.capacity}</span>
+                            </button>
+                        </td>
+                        <td class="py-3 px-6 text-right space-x-2">
+                            <button onclick="openEditEventModal(${ev.id})" class="text-slate-400 hover:text-indigo-600 transition p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteEvent(${ev.id})" class="text-slate-400 hover:text-rose-600 transition p-1"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById("admin-stat-events").innerText = events.length;
+            document.getElementById("admin-stat-regs").innerText = totalRegs;
+            document.getElementById("admin-stat-venues").innerText = venues.size;
+            renderStudentAccounts();
+        }
+
+        function renderStudentAccounts() {
+            const tbody = document.getElementById("student-account-table");
+            if (!tbody) return;
+            tbody.innerHTML = "";
+            studentAccounts.forEach(account => {
+                tbody.innerHTML += `<tr><td class="py-3 px-5 font-medium text-slate-800">${escapeCalendarText(account.name)}</td><td class="py-3 px-5 font-mono text-indigo-700">${escapeCalendarText(account.username)}</td><td class="py-3 px-5"><span class="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700">Active</span></td></tr>`;
+            });
+        }
+
+        function createStudentAccount(e) {
+            e.preventDefault();
+            const name = document.getElementById("new-student-name").value.trim();
+            const studentClass = document.getElementById("new-student-class").value.trim();
+            const passingYear = parseInt(document.getElementById("new-student-year").value);
+            const rollNo = document.getElementById("new-student-roll").value.trim();
+            const username = document.getElementById("new-student-id").value.trim();
+            const password = document.getElementById("new-student-password").value;
+            if (studentAccounts.some(a => a.username.toLowerCase() === username.toLowerCase())) {
+                showAlert("That student login ID already exists. Choose a unique ID.", "error");
+                return;
+            }
+            studentAccounts.push({ name, studentClass, passingYear, rollNo, username, password });
+            localStorage.setItem("campusStudentAccounts", JSON.stringify(studentAccounts));
+            document.getElementById("student-account-form").reset();
+            renderStudentAccounts();
+            showAlert(`Student login created for ${name}. Share the login ID and temporary password with that student.`, "success");
+        }
+
+        // Modal Controls for Event Creation & Editing
+        function openEventModal() {
+            document.getElementById("modal-title").innerText = "Create New Event";
+            document.getElementById("event-form").reset();
+            document.getElementById("edit-event-id").value = "";
+            refreshTimeSlots();
+            document.getElementById("event-modal").classList.remove("hidden");
+            document.getElementById("event-modal").classList.add("flex");
+        }
+
+        function openEditEventModal(id) {
+            const ev = events.find(e => e.id === id);
+            document.getElementById("modal-title").innerText = "Edit Event Details";
+            document.getElementById("edit-event-id").value = ev.id;
+            document.getElementById("f-name").value = ev.name;
+            document.getElementById("f-desc").value = ev.desc;
+            document.getElementById("f-category").value = ev.category;
+            document.getElementById("f-capacity").value = ev.capacity;
+            document.getElementById("f-date").value = ev.date;
+            document.getElementById("f-time").value = ev.time;
+            document.getElementById("f-venue").value = ev.venue;
+            refreshTimeSlots(ev.id);
+
+            document.getElementById("event-modal").classList.remove("hidden");
+            document.getElementById("event-modal").classList.add("flex");
+        }
+
+        function closeEventModal() {
+            document.getElementById("event-modal").classList.add("hidden");
+            document.getElementById("event-modal").classList.remove("flex");
+        }
+
+        function handleSaveEvent(e) {
+            e.preventDefault();
+            const editId = document.getElementById("edit-event-id").value;
+
+            const name = document.getElementById("f-name").value;
+            const desc = document.getElementById("f-desc").value;
+            const category = document.getElementById("f-category").value;
+            const capacity = parseInt(document.getElementById("f-capacity").value);
+            const date = document.getElementById("f-date").value;
+            const time = document.getElementById("f-time").value;
+            const venue = document.getElementById("f-venue").value;
+
+            if (!validateSelectedTimeSlot()) return;
+
+            if (editId) {
+                // Update Existing Event
+                const ev = events.find(item => item.id == editId);
+                ev.name = name;
+                ev.desc = desc;
+                ev.category = category;
+                ev.capacity = capacity;
+                ev.date = date;
+                ev.time = time;
+                ev.venue = venue;
+                showAlert("Event updated successfully.", "success");
+            } else {
+                // Create New Event
+                const newEvent = {
+                    id: Date.now(),
+                    name,
+                    desc,
+                    category,
+                    capacity,
+                    date,
+                    time,
+                    venue,
+                    registeredStudents: []
+                };
+                events.push(newEvent);
+                showAlert("New event successfully created and published.", "success");
+            }
+
+            closeEventModal();
+            renderApp();
+            renderCalendar();
+        }
+
+        function deleteEvent(id) {
+            if (confirm("Are you sure you want to delete this event? All participant registrations will be removed.")) {
+                events = events.filter(e => e.id !== id);
+                showAlert("Event deleted successfully.", "info");
+                renderApp();
+            renderCalendar();
+            }
+        }
+
+        // View Participants Attendance Modal
+        function openParticipantsModal(id) {
+            const ev = events.find(e => e.id === id);
+            document.getElementById("participants-event-title").innerText = `${ev.name} — Registered List`;
+            const listContainer = document.getElementById("participants-list");
+            listContainer.innerHTML = "";
+
+            if (ev.registeredStudents.length === 0) {
+                listContainer.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">No registrations recorded for this event yet.</div>`;
+            } else {
+                ev.registeredStudents.forEach((student, index) => {
+                    listContainer.innerHTML += `
+                        <div class="px-4 py-2.5 flex justify-between items-center text-sm bg-white">
+                            <span class="text-slate-700 font-medium">${index + 1}. ${student}</span>
+                            <span class="text-xs bg-emerald-50 text-emerald-600 font-semibold px-2 py-0.5 rounded">Confirmed</span>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById("participants-modal").classList.remove("hidden");
+            document.getElementById("participants-modal").classList.add("flex");
+        }
+
+        function closeParticipantsModal() {
+            document.getElementById("participants-modal").classList.add("hidden");
+            document.getElementById("participants-modal").classList.remove("flex");
+        }
+
+
+        // ----------------- CALENDAR AND TIME-SLOT SYSTEM -----------------
+        function calendarDateKey(year, monthIndex, day) {
+            return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        }
+
+        function changeCalendarMonth(step) {
+            calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + step, 1);
+            renderCalendar();
+        }
+
+        function selectCalendarDate(date) {
+            selectedCalendarDate = date;
+            document.getElementById("selected-date-heading").innerText =
+                "Events and slots · " + new Date(date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+            renderCalendar();
+            filterEvents();
+        }
+
+        function clearCalendarDateFilter() {
+            selectedCalendarDate = "";
+            document.getElementById("selected-date-heading").innerText = "Events and slots · All dates";
+            renderCalendar();
+            filterEvents();
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById("calendar-grid");
+            const label = document.getElementById("calendar-month-label");
+            if (!grid || !label) return;
+            const year = calendarMonth.getFullYear();
+            const month = calendarMonth.getMonth();
+            label.innerText = calendarMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+            grid.innerHTML = "";
+            const firstDay = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += `<div class="min-h-16 sm:min-h-20 rounded-lg bg-slate-50/70"></div>`;
+            }
+            for (let day = 1; day <= totalDays; day++) {
+                const date = calendarDateKey(year, month, day);
+                const dayEvents = events.filter(ev => ev.date === date);
+                const selected = selectedCalendarDate === date;
+                grid.innerHTML += `
+                    <button type="button" onclick="selectCalendarDate('${date}')"
+                        class="min-h-16 sm:min-h-20 p-1 sm:p-2 rounded-lg border text-center transition ${selected ? "bg-emerald-50 border-emerald-400 ring-2 ring-emerald-100" : "bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50"}">
+                        <span class="text-sm font-bold ${selected ? "text-emerald-700" : "text-slate-700"}">${day}</span>
+                        ${dayEvents.length ? `<div class="mt-1 text-[10px] sm:text-xs font-semibold text-indigo-600"><i class="fa-solid fa-circle text-[6px] mr-1"></i>${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}</div>` : ""}
+                    </button>`;
+            }
+            renderCalendarDayDetails();
+        }
+
+        function renderCalendarDayDetails() {
+            const details = document.getElementById("calendar-day-details");
+            const slotBox = document.getElementById("calendar-time-slots");
+            if (!details || !slotBox) return;
+            if (!selectedCalendarDate) {
+                details.innerHTML = `<div class="md:col-span-2 p-4 rounded-lg bg-slate-50 text-sm text-slate-500">Select a date on the calendar to see the schedule and slot availability.</div>`;
+                slotBox.innerHTML = "";
+                return;
+            }
+            const dayEvents = events.filter(ev => ev.date === selectedCalendarDate).sort((a, b) => a.time.localeCompare(b.time));
+            details.innerHTML = dayEvents.length ? dayEvents.map(ev => `
+                <div class="p-3 rounded-lg border border-indigo-100 bg-indigo-50/60">
+                    <div class="flex items-start justify-between gap-2">
+                        <div><p class="font-semibold text-sm text-slate-800">${escapeCalendarText(ev.name)}</p>
+                        <p class="text-xs text-slate-500 mt-1">${escapeCalendarText(ev.venue)} · ${escapeCalendarText(ev.category)}</p></div>
+                        <span class="shrink-0 text-xs font-bold text-indigo-700 bg-white rounded-md px-2 py-1">${escapeCalendarText(ev.time)}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">${ev.registeredStudents.length}/${ev.capacity} seats filled</p>
+                </div>`).join("") :
+                `<div class="md:col-span-2 p-4 rounded-lg bg-slate-50 text-sm text-slate-500">No events scheduled for this date yet.</div>`;
+
+            slotBox.innerHTML = `<p class="w-full text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">Time-slot overview</p>` +
+                TIME_SLOTS.map(time => {
+                    const booked = dayEvents.some(ev => ev.time === time);
+                    return `<span class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${booked ? "bg-rose-50 border-rose-200 text-rose-600" : "bg-emerald-50 border-emerald-200 text-emerald-700"}">${time} · ${booked ? "Scheduled" : "Available"}</span>`;
+                }).join("");
+        }
+
+        function escapeCalendarText(value) {
+            return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+        }
+
+        function refreshTimeSlots(editingId = null) {
+            const select = document.getElementById("f-time");
+            if (!select) return;
+            const date = document.getElementById("f-date").value;
+            const venue = document.getElementById("f-venue").value.trim().toLowerCase();
+            const editId = editingId ?? document.getElementById("edit-event-id").value;
+            const previous = select.value;
+            select.innerHTML = `<option value="">Choose a time slot</option>`;
+
+            TIME_SLOTS.forEach(time => {
+                const occupied = events.some(ev =>
+                    String(ev.id) !== String(editId || "") &&
+                    ev.date === date &&
+                    ev.venue.trim().toLowerCase() === venue &&
+                    ev.time === time
+                );
+                const option = document.createElement("option");
+                option.value = time;
+                option.textContent = occupied ? `${time} — booked at this venue` : time;
+                option.disabled = occupied;
+                select.appendChild(option);
+            });
+
+            if (previous && Array.from(select.options).some(o => o.value === previous && !o.disabled)) {
+                select.value = previous;
+            } else if (editId) {
+                const current = events.find(ev => String(ev.id) === String(editId));
+                if (current && current.time) {
+                    let option = Array.from(select.options).find(o => o.value === current.time);
+                    if (!option) {
+                        option = document.createElement("option");
+                        option.value = current.time;
+                        option.textContent = `${current.time} — current event slot`;
+                        select.appendChild(option);
+                    }
+                    option.disabled = false;
+                    select.value = current.time;
+                }
+            }
+        }
+
+        function validateSelectedTimeSlot(showMessage = true) {
+            const date = document.getElementById("f-date").value;
+            const time = document.getElementById("f-time").value;
+            const venue = document.getElementById("f-venue").value.trim().toLowerCase();
+            const editId = document.getElementById("edit-event-id").value;
+            const conflict = events.find(ev =>
+                String(ev.id) !== String(editId || "") &&
+                ev.date === date && ev.time === time &&
+                ev.venue.trim().toLowerCase() === venue
+            );
+            if (conflict && showMessage) showAlert("That time slot is already booked at this venue. Please choose another slot.", "error");
+            return !conflict;
+        }
+
+        // Helper: Alert banner notification
+        function showAlert(message, type = "success") {
+            const box = document.getElementById("alert-box");
+            box.className = "mb-6 p-4 rounded-lg border text-sm transition-all shadow-sm";
+            
+            if (type === "success") {
+                box.classList.add("bg-emerald-50", "border-emerald-200", "text-emerald-800");
+            } else if (type === "error") {
+                box.classList.add("bg-rose-50", "border-rose-200", "text-rose-800");
+            } else {
+                box.classList.add("bg-sky-50", "border-sky-200", "text-sky-800");
+            }
+
+            box.innerHTML = `<div class="flex items-center justify-between"><span>${message}</span><button onclick="this.parentElement.parentElement.classList.add('hidden')" class="text-current opacity-70 hover:opacity-100"><i class="fa-solid fa-xmark"></i></button></div>`;
+            box.classList.remove("hidden");
+
+            setTimeout(() => {
+                box.classList.add("hidden");
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
